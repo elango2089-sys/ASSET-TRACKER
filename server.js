@@ -10,7 +10,10 @@ const DATA_FILE = path.join(__dirname, 'data.json');
 
 app.use(cors());
 app.use(bodyParser.json({ limit: '50mb' }));
-app.use(express.static(__dirname));
+
+// Serve from 'dist' if it exists, otherwise root
+const staticPath = fs.existsSync(path.join(__dirname, 'dist')) ? path.join(__dirname, 'dist') : __dirname;
+app.use(express.static(staticPath));
 
 // Initialize data.json if it doesn't exist
 if (!fs.existsSync(DATA_FILE)) {

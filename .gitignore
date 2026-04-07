@@ -1,0 +1,9 @@
+node_modules/
+.DS_Store
+.vscode/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Data file (if you want to keep data separate from code)
+# data.json

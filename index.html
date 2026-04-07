@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synergy Asset Tracker</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- SheetJS for Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- PWA & Mobile -->
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Authentication Overlay -->
+    <div id="auth-overlay" class="auth-overlay">
+        <div class="auth-card" id="loginCard">
+            <div class="auth-header">
+                <img src="logo.png" alt="Synergy Global Sourcing" class="brand-logo" style="max-height: 80px;">
+                <h2>Welcome Back</h2>
+                <p>Sign in to access Asset Tracker</p>
+            </div>
+            
+            <form id="loginForm" class="modern-form">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="usernameInput" autocomplete="username" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="passwordInput" autocomplete="current-password" required>
+                </div>
+                <div class="auth-actions">
+                    <button type="button" id="forgotBtn" class="text-btn">Forgot Password?</button>
+                </div>
+                <div id="loginError" class="auth-error hidden">Invalid credentials</div>
+                <button type="submit" class="btn btn-primary">Login</button>
+            </form>
+        </div>
+
+        <div class="auth-card hidden" id="resetCard">
+            <div class="auth-header">
+                <img src="logo.png" alt="Synergy Global Sourcing" class="brand-logo" style="max-height: 80px;">
+                <h2>Reset Password</h2>
+                <p id="resetMessage">Enter your new password below. A confirmation has been simulated for <br><strong>stores@synergyglobal.in</strong></p>
+            </div>
+            
+            <form id="resetForm" class="modern-form">
+                <div class="form-group">
+                    <label>New Password</label>
+                    <input type="password" id="newPasswordInput" required>
+                </div>
+                <div class="form-group">
+                    <label>Confirm New Password</label>
+                    <input type="password" id="confirmPasswordInput" required>
+                </div>
+                <div id="resetError" class="auth-error hidden">Passwords do not match</div>
+                <div style="display: flex; gap: 10px; margin-top: 24px;">
+                    <button type="button" id="cancelResetBtn" class="btn" style="background: rgba(255,255,255,0.1); color: white; width: 50%;">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="width: 50%;">Update</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="app" class="app-container hidden">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="logo.png" alt="Synergy Global Sourcing" class="brand-logo">
+            </div>
+            
+            <nav class="sidebar-nav">
+                <button class="nav-btn active" data-tab="dashboard">
+                    <i data-lucide="layout-dashboard"></i> Dashboard
+                </button>
+                <button class="nav-btn" data-tab="dispatch">
+                    <i data-lucide="truck"></i> Dispatch Bins
+                </button>
+                <button class="nav-btn" data-tab="return">
+                    <i data-lucide="arrow-left-right"></i> Return Bins
+                </button>
+                <button class="nav-btn" data-tab="suppliers">
+                    <i data-lucide="users"></i> Suppliers
+                </button>
+                <button class="nav-btn" data-tab="history">
+                    <i data-lucide="history"></i> History
+                </button>
+                <div style="flex: 1"></div>
+                <button class="nav-btn" id="logoutBtn" style="color: var(--danger); margin-top: auto;">
+                    <i data-lucide="log-out"></i> Logout
+                </button>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <p>Synergy Global Sourcing</p>
+                <p class="subtext">Asset Management v1.0</p>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Topbar -->
+            <header class="topbar">
+                <div class="current-date-time" id="currentTime"></div>
+                <div class="topbar-actions">
+                    <div id="serverStatus" style="margin-right: 15px; font-size: 0.8rem;"></div>
+                    <button id="exportExcelBtn" class="action-btn">
+                        <i data-lucide="download"></i> Export Data
+                    </button>
+                </div>
+            </header>
+
+            <!-- Dashboard View -->
+            <section id="view-dashboard" class="view active">
+                <div class="page-header">
+                    <h1>Dashboard</h1>
+                    <p>Overview of current bin stock and outstanding dispatches</p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card blue">
+                        <div class="stat-icon"><i data-lucide="package"></i></div>
+                        <div class="stat-info">
+                            <h3>Total Small Bins</h3>
+                            <p id="statTotalSmall">400</p>
+                        </div>
+                    </div>
+                    <div class="stat-card purple">
+                        <div class="stat-icon"><i data-lucide="package-search"></i></div>
+                        <div class="stat-info">
+                            <h3>Total Big Bins</h3>
+                            <p id="statTotalBig">400</p>
+                        </div>
+                    </div>
+                    <div class="stat-card orange">
+                        <div class="stat-icon"><i data-lucide="truck"></i></div>
+                        <div class="stat-info">
+                            <h3>Currently Out</h3>
+                            <p id="statCurrentlyOut">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card green">
+                        <div class="stat-icon"><i data-lucide="check-circle-2"></i></div>
+                        <div class="stat-info">
+                            <h3>In Stock</h3>
+                            <p id="statInStock">800</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-tables">
+                    <div class="table-card">
+                        <div class="card-header">
+                            <h3>Outstanding Dispatches</h3>
+                        </div>
+                        <div class="table-responsive">
+                            <table id="outstandingTable">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>DC Number</th>
+                                        <th>Supplier</th>
+                                        <th>Sent</th>
+                                        <th>Returned</th>
+                                        <th>Balance</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Dispatch View -->
+            <section id="view-dispatch" class="view">
+                <div class="page-header">
+                    <h1>Dispatch Bins</h1>
+                    <p>Create a new delivery challan to send bins to a supplier</p>
+                </div>
+
+                <div class="form-card">
+                    <form id="dispatchForm" class="modern-form">
+                        <div class="form-row two-col">
+                            <div class="form-group">
+                                <label>Date</label>
+                                <input type="date" id="dispatchDate" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Vehicle Number</label>
+                                <div style="display: flex; gap: 8px;">
+                                    <select id="vehicleSelect" style="flex: 1;" required>
+                                        <option value="" disabled selected>Select a saved vehicle...</option>
+                                        <!-- Populated by JS -->
+                                        <option value="ADD_NEW" style="font-weight: bold; color: var(--primary-light);">+ Add New Vehicle</option>
+                                    </select>
+                                    <input type="text" id="vehicleNumberCustom" placeholder="e.g. TN-70-A-1234" class="hidden" style="flex: 1;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Supplier List</label>
+                            <!-- Using input with a datalist allows both strict dropdown selection AND manual typing -->
+                            <input type="text" id="dispatchSupplier" list="supplierOptions" placeholder="Type or select a supplier..." required autocomplete="off">
+                            <datalist id="supplierOptions">
+                                <!-- Populated by JS -->
+                            </datalist>
+                        </div>
+
+                        <div class="bin-selection-area">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <h3>Select Bins to Dispatch</h3>
+                            </div>
+                            
+                            <div class="multi-select-grid">
+                                <div class="number-picker">
+                                    <label><i data-lucide="box"></i> Small Bins (SGM-S)</label>
+                                    <div class="available-bins-container" id="smallBinsContainer">
+                                        <!-- Checkboxes generated by JS -->
+                                    </div>
+                                </div>
+                                
+                                <div class="number-picker">
+                                    <label><i data-lucide="package"></i> Big Bins (SGM-B)</label>
+                                    <div class="available-bins-container" id="bigBinsContainer">
+                                        <!-- Checkboxes generated by JS -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                            
+                            <div class="selected-bins-preview">
+                                <h4>Selected Bins (<span id="selectedCount">0</span>)</h4>
+                                <div id="selectedBinsList" class="tags-container">
+                                    <!-- Tags generated by JS -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                        <div class="form-actions">
+                            <button type="button" id="previewDispatchBtn" class="btn btn-primary">
+                                <i data-lucide="eye"></i> Preview Dispatch
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Preview Modal -->
+                <div id="previewModal" class="auth-overlay hidden" style="z-index: 50;">
+                    <div class="auth-card" style="max-width: 600px;">
+                        <div class="auth-header">
+                            <h2>Review Dispatch</h2>
+                            <p>Verify details before generating DC</p>
+                        </div>
+                        <div id="previewContent" style="margin-bottom: 24px;">
+                            <!-- Populated by JS -->
+                        </div>
+                        <div style="display: flex; gap: 10px; margin-top: 24px;">
+                            <button type="button" id="editDispatchBtn" class="btn" style="background: rgba(255,255,255,0.1); color: white; width: 40%">
+                                <i data-lucide="edit"></i> Edit
+                            </button>
+                            <button type="button" id="confirmDispatchBtn" class="btn btn-primary" style="width: 60%">
+                                <i data-lucide="check"></i> Confirm & Generate DC
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Return View -->
+            <section id="view-return" class="view">
+                <div class="page-header">
+                    <h1>Return Bins</h1>
+                    <p>Log incoming bins returned by suppliers</p>
+                </div>
+
+                <div class="form-card">
+                    <div class="form-group search-group">
+                        <label>Select Supplier for Inward (Return)</label>
+                        <select id="returnSupplierSelect">
+                            <option value="" disabled selected>Select a supplier with outstanding bins...</option>
+                            <!-- Populated by JS -->
+                        </select>
+                    </div>
+
+                    <div id="returnDetailsArea" class="hidden">
+                        <div class="dispatch-summary" id="returnSummary">
+                            <!-- Populated by JS -->
+                        </div>
+
+                        <div class="form-row mt-4">
+                            <div class="form-group">
+                                <label>Return Vehicle Number</label>
+                                <input type="text" id="returnVehicleNumber" placeholder="Enter vehicle number..." required>
+                            </div>
+                        </div>
+
+                        <div class="form-group mt-4">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <label style="margin-bottom: 0;">Select Specific Bins Returned</label>
+                                <div style="display: flex; gap: 8px;">
+                                    <button type="button" id="selectAllReturnBins" class="btn btn-sm" style="padding: 4px 10px; font-size: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white;">Select All</button>
+                                    <button type="button" id="deselectAllReturnBins" class="btn btn-sm" style="padding: 4px 10px; font-size: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white;">Deselect All</button>
+                                </div>
+                            </div>
+                            <div class="available-bins-container" id="pendingReturnBinsContainer">
+                                <!-- Checkboxes for outstanding bins in this dispatch -->
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button id="previewReturnBtn" class="btn btn-primary">
+                                <i data-lucide="eye"></i> Preview Collection
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+                </div>
+            </section>
+
+            <!-- Return Preview Modal -->
+            <div id="returnPreviewModal" class="auth-overlay hidden" style="z-index: 55;">
+                <div class="auth-card" style="max-width: 600px;">
+                    <div class="auth-header">
+                        <h2>Inward Collection Preview</h2>
+                        <p>Verify returned assets before finalizing</p>
+                    </div>
+                    <div id="returnPreviewContent" style="margin-bottom: 24px;">
+                        <!-- Populated by JS -->
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-top: 24px;">
+                        <button type="button" id="editReturnBtn" class="btn" style="background: rgba(0,0,0,0.05); color: #333; width: 40%; border: 1px solid #ddd;">
+                            <i data-lucide="edit"></i> Edit
+                        </button>
+                        <button type="button" id="confirmReturnBtn" class="btn btn-primary" style="width: 60%">
+                            <i data-lucide="check"></i> Confirm & Generate Receipt
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+                </div>
+            </section>
+
+            <!-- Suppliers View -->
+            <section id="view-suppliers" class="view hidden">
+                <div class="header-section">
+                    <h1>Supplier Ledger</h1>
+                    <p>Track overall bin movements per supplier</p>
+                </div>
+
+                <div class="table-container">
+                    <table class="modern-table" id="suppliersTable">
+                        <thead>
+                            <tr>
+                                <th>Supplier Name</th>
+                                <th>Total Sent</th>
+                                <th>Total Returned</th>
+                                <th>Balance (With Supplier)</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Supplier Ledger Modal -->
+            <div id="ledgerModal" class="auth-overlay hidden" style="z-index: 60;">
+                <div class="auth-card" style="max-width: 900px; width: 95%;">
+                    <div class="auth-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <h2 id="ledgerSupplierName">Supplier Name</h2>
+                            <p>Complete Movement History & Current Assets</p>
+                        </div>
+                        <button class="btn btn-sm" onclick="document.getElementById('ledgerModal').classList.add('hidden')" style="background: rgba(0,0,0,0.05); color: #666; padding: 4px;">
+                            <i data-lucide="x"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="ledger-grid" style="display: grid; grid-template-columns: 1fr 300px; gap: 24px; max-height: 60vh; overflow: hidden;">
+                        <div class="ledger-history" style="overflow-y: auto; padding-right: 12px; border-right: 1px solid #eee;">
+                            <h4 style="color: #333; margin-bottom: 12px; font-size: 0.9rem;">Transaction History</h4>
+                            <div id="ledgerHistoryContent">
+                                <!-- Table populated by JS -->
+                            </div>
+                        </div>
+                        <div class="ledger-assets" style="overflow-y: auto;">
+                            <h4 style="color: #333; margin-bottom: 12px; font-size: 0.9rem;">Bins Currently Held</h4>
+                            <div id="ledgerAssetsContent" class="tags-container" style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                <!-- Tags populated by JS -->
+                            </div>
+                            <button id="ledgerCollectBtn" class="btn btn-primary" style="width: 100%; margin-top: 20px;">
+                                <i data-lucide="arrow-down-to-line"></i> Collect These Bins
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History View -->
+            <section id="view-history" class="view">
+                <div class="page-header">
+                    <h1>Transaction History</h1>
+                    <p>All dispatch and return movements</p>
+                </div>
+                
+                <div class="table-card">
+                    <div class="table-responsive">
+                        <table id="historyTable">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>DC Number</th>
+                                    <th>Supplier</th>
+                                    <th>Vehicle</th>
+                                    <th>Bins Affected</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Details Modal -->
+            <div id="detailsModal" class="auth-overlay hidden" style="z-index: 60;">
+                <div class="auth-card" style="max-width: 600px;">
+                    <div class="auth-header" style="margin-bottom: 20px;">
+                        <h2 style="font-size: 1.25rem; text-align: left; margin: 0;">Dispatch Details</h2>
+                        <button type="button" id="closeDetailsBtn" style="position: absolute; top: 20px; right: 20px; background: none; border: none; color: white; cursor: pointer;">
+                            <i data-lucide="x"></i>
+                        </button>
+                    </div>
+                    <div id="detailsContent" style="margin-bottom: 0;">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Printable DC Form Area -->
+    <div id="printArea" class="print-only">
+        <!-- The DC format will be injected here during print -->
+    </div>
+
+    <!-- Scripts -->
+    <script src="suppliers.js"></script>
+    <script src="app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then(reg => {
+                    console.log('SW registered!', reg);
+                }).catch(err => {
+                    console.error('SW registration failed:', err);
+                });
+            });
+        }
+    </script>
+</body>
+</html>

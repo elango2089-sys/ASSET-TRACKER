@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node api/index.js",
     "dev": "nodemon api/index.js",
-    "build": "if (!(Test-Path dist)) { mkdir dist }; cp index.html, styles.css, app.js, suppliers.js, logo.png, manifest.json, sw.js dist/"
+    "build": "mkdir -p dist && cp index.html styles.css app.js suppliers.js logo.png manifest.json sw.js dist/"
   },
   "dependencies": {
     "express": "^4.18.2",

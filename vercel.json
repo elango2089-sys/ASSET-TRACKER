@@ -1,24 +1,10 @@
 {
   "version": 2,
   "name": "synergy-asset-tracker",
-  "builds": [
+  "rewrites": [
     {
-      "src": "server.js",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "server.js"
-    },
-    {
-      "src": "/(index.html|app.js|styles.css|suppliers.js|sw.js|manifest.json|logo.png)",
-      "dest": "/$1"
-    },
-    {
-      "src": "/",
-      "dest": "index.html"
+      "source": "/api/(.*)",
+      "destination": "/api/index.js"
     }
   ]
 }

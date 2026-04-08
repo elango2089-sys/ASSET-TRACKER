@@ -1,6 +1,7 @@
 {
   "version": 2,
   "name": "synergy-asset-tracker",
+  "outputDirectory": "dist",
   "rewrites": [
     {
       "source": "/api/(.*)",
